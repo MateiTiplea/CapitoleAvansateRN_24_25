@@ -157,8 +157,9 @@ def train(epochs, device):
 
 
 if __name__ == "__main__":
-    device = get_default_device()
-    train(epochs=20, device=device)
+    if torch.cuda.is_available():
+        device = torch.device("cuda")
+        train(epochs=20, device=device)
 
     device = torch.device("cpu")
     train(epochs=20, device=device)
