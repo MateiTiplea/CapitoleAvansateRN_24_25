@@ -2,8 +2,25 @@ dataset:
   name: "MNIST"
   data_dir: "./data/mnist"
   download: False
-  initial_transform_script: "./transforms/initial_transforms.py" # Path to user-defined initial transforms
-  runtime_transform_script: "./transforms/runtime_transforms.py" # Path to user-defined runtime transforms
+  # initial_transform_script: "./transforms/initial_transforms.py" # Path to user-defined initial transforms
+  # runtime_transform_script: "./transforms/runtime_transforms.py" # Path to user-defined runtime transforms
+
+dataloader:
+  train:
+    num_workers: 0
+    batch_size: 64
+    drop_last: True
+    persistent_workers: False
+    shuffle: True
+    pin_memory: True
+
+  test:
+    num_workers: 0
+    batch_size: 64
+    drop_last: False
+    persistent_workers: False
+    shuffle: False
+    pin_memory: False
 
 training:
   # Placeholder for training properties

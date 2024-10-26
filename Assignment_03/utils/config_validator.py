@@ -5,8 +5,16 @@ import yaml
 
 
 class ConfigValidator:
-    REQUIRED_SECTIONS = ["dataset", "training", "output"]
+    REQUIRED_SECTIONS = ["dataset", "training", "output", "dataloader"]
     DEFAULT_DATASETS = {"MNIST", "CIFAR10", "CIFAR100"}
+    DEFAULT_DATALOADER_PARAMS = {
+        "num_workers": 0,
+        "batch_size": 64,
+        "drop_last": False,
+        "persistent_workers": False,
+        "shuffle": False,
+        "pin_memory": False,
+    }
 
     def __init__(self, config_path):
         self.config_path = config_path
@@ -34,25 +42,23 @@ class ConfigValidator:
                     f"Missing required section: '{section}' in the config file."
                 )
 
-        # Validate the dataset section
+        # Validate dataset section
         dataset_section = self.config_data.get("dataset")
         if "name" not in dataset_section:
             raise ValueError("The 'dataset' section must contain a 'name' attribute.")
 
         dataset_name = dataset_section["name"]
-
-        # Ensure data_dir is present and valid
         self._validate_data_dir(dataset_section)
-
-        # Set or validate the download flag based on data_dir content
         self._set_or_validate_download_flag(dataset_section, dataset_name)
 
-        # Check if the dataset name is one of the defaults or custom
         if dataset_name not in self.DEFAULT_DATASETS:
             self._validate_custom_dataset(dataset_section)
 
         # Validate transform scripts
         self._validate_transform_scripts(dataset_section)
+
+        # Validate dataloader configuration
+        self._validate_dataloader()
 
         return self.config_data
 
@@ -81,17 +87,14 @@ class ConfigValidator:
         """Sets or validates the download flag for default datasets based on the data_dir content."""
         download = dataset_section.get("download", False)
 
-        # If the dataset is default and data_dir is empty, set download to True
         if dataset_name in self.DEFAULT_DATASETS:
             data_dir = dataset_section["data_dir"]
             if os.path.isdir(data_dir) and not os.listdir(data_dir):
-                # Directory is empty, automatically set download to True
                 download = True
                 print(
                     f"The data directory '{data_dir}' is empty. Setting 'download' to True."
                 )
 
-        # Ensure download is a boolean
         if not isinstance(download, bool):
             raise ValueError(
                 "The 'download' attribute in the 'dataset' section must be a boolean (True or False)."
@@ -105,16 +108,12 @@ class ConfigValidator:
         """Validates custom dataset attributes such as module path, class, and data_dir."""
         dataset_name = dataset_section["name"]
 
-        # Validate custom dataset format
         if "." not in dataset_name:
             raise ValueError(
                 "Custom dataset name must be in '<module_name>.<dataset_class>' format."
             )
 
-        # Split the module and class name
         module_name, class_name = dataset_name.rsplit(".", 1)
-
-        # Attempt to import the module and class
         try:
             module = importlib.import_module(module_name)
             if not hasattr(module, class_name):
@@ -138,3 +137,36 @@ class ConfigValidator:
                         f"The transform script '{script_path}' must be a Python (.py) file."
                     )
                 print(f"Transform script '{script_path}' validated successfully.")
+
+    def _validate_dataloader(self):
+        """Validates the dataloader section with train and test configurations."""
+        dataloader_section = self.config_data.get("dataloader")
+        for mode in ["train", "test"]:
+            if mode not in dataloader_section:
+                raise ValueError(
+                    f"Missing '{mode}' configuration in the 'dataloader' section."
+                )
+
+            # Validate each dataloader parameter and set defaults where necessary
+            dataloader_config = dataloader_section[mode]
+            for param, default_value in self.DEFAULT_DATALOADER_PARAMS.items():
+                if param in dataloader_config:
+                    # Ensure correct type for each parameter
+                    if param in ["num_workers", "batch_size"] and not isinstance(
+                        dataloader_config[param], int
+                    ):
+                        raise ValueError(
+                            f"'{param}' in dataloader '{mode}' must be an integer."
+                        )
+                    if param in [
+                        "drop_last",
+                        "persistent_workers",
+                        "shuffle",
+                        "pin_memory",
+                    ] and not isinstance(dataloader_config[param], bool):
+                        raise ValueError(
+                            f"'{param}' in dataloader '{mode}' must be a boolean."
+                        )
+                else:
+                    # Set default if parameter is missing
+                    dataloader_config[param] = default_value
