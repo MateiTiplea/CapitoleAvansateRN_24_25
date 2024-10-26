@@ -4,6 +4,7 @@ from utils.dataloader_factory import DataLoaderFactory
 from utils.dataset_factory import DatasetFactory
 from utils.device_utils import get_device
 from utils.model_factory import ModelFactory
+from utils.optimizer_factory import OptimizerFactory
 
 
 def main():
@@ -57,6 +58,11 @@ def main():
     model_factory = ModelFactory(config)
     model = model_factory.get_model()
     print("Model loaded successfully:", model)
+
+    # Step 9: Initialize OptimizerFactory with config data
+    optimizer_factory = OptimizerFactory(config)
+    optimizer = optimizer_factory.get_optimizer(model.parameters())
+    print("Optimizer loaded successfully:", optimizer)
 
 
 if __name__ == "__main__":

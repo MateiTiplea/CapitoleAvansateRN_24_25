@@ -20,6 +20,13 @@ class ConfigValidator:
         "shuffle": False,
         "pin_memory": False,
     }
+    SUPPORTED_OPTIMIZERS = {"SGD", "Adam", "AdamW", "RMSprop"}
+    DEFAULT_OPTIMIZER_PARAMS = {
+        "SGD": {"lr": 0.01, "momentum": 0.0, "weight_decay": 0.0, "nesterov": False},
+        "Adam": {"lr": 0.001, "weight_decay": 0.0},
+        "AdamW": {"lr": 0.001, "weight_decay": 0.0},
+        "RMSprop": {"lr": 0.01, "momentum": 0.0, "weight_decay": 0.0},
+    }
 
     def __init__(self, config_path):
         self.config_path = config_path
@@ -65,7 +72,7 @@ class ConfigValidator:
         # Validate dataloader configuration
         self._validate_dataloader()
 
-        # Validate training configuration including model selection
+        # Validate training configuration including model selection and optimizer
         self._validate_training(dataset_name)
 
         return self.config_data
@@ -183,6 +190,13 @@ class ConfigValidator:
         """Validates the training section, focusing on model specification."""
         training_section = self.config_data.get("training")
 
+        # Validate model selection
+        self._validate_model(dataset_name, training_section)
+
+        # Validate optimizer selection
+        self._validate_optimizer(training_section)
+
+    def _validate_model(self, dataset_name, training_section):
         model_name = training_section.get("model")
         model_file = training_section.get("model_file")
         model_class = training_section.get("model_class")
@@ -211,3 +225,38 @@ class ConfigValidator:
             raise ValueError(
                 "You must specify either 'model' or both 'model_file' and 'model_class' in the training section."
             )
+
+    def _validate_optimizer(self, training_section):
+        """Validates the optimizer section within training."""
+        optimizer_section = training_section.get("optimizer")
+        if not optimizer_section:
+            raise ValueError(
+                "The 'training' section must contain an 'optimizer' subsection."
+            )
+
+        optimizer_name = optimizer_section.get("name")
+        if optimizer_name not in self.SUPPORTED_OPTIMIZERS:
+            raise ValueError(f"Unsupported optimizer: '{optimizer_name}'.")
+
+        # Validate optimizer parameters, setting defaults where necessary
+        params = optimizer_section.get("params", {})
+        default_params = self.DEFAULT_OPTIMIZER_PARAMS[optimizer_name]
+
+        for param, default_value in default_params.items():
+            if param in params:
+                if param in ["lr", "weight_decay", "momentum"] and not isinstance(
+                    params[param], (int, float)
+                ):
+                    raise ValueError(
+                        f"'{param}' for optimizer '{optimizer_name}' must be a number."
+                    )
+                if param == "nesterov" and not isinstance(params[param], bool):
+                    raise ValueError(
+                        f"'nesterov' for optimizer '{optimizer_name}' must be a boolean."
+                    )
+            else:
+                # Set default if parameter is missing
+                params[param] = default_value
+
+        optimizer_section["params"] = params  # Update config with validated params
+        print(f"Optimizer '{optimizer_name}' validated successfully.")

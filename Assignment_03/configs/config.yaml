@@ -25,7 +25,13 @@ dataloader:
 training:
   model_file: "./models/mlp.py"
   model_class: "MLP"
-  learning_rate: 0.001
+  optimizer:
+    name: "SGD" # or "Adam", "AdamW", "RMSprop"
+    params:
+      lr: 0.01
+      momentum: 0.9
+      weight_decay: 0.0001
+      nesterov: True
 
 output:
   # Placeholder for output properties
