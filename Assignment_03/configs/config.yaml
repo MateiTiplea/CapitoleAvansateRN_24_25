@@ -23,7 +23,8 @@ dataloader:
     pin_memory: False
 
 training:
-  model: "MLP"
+  model_file: "./models/mlp.py"
+  model_class: "MLP"
   learning_rate: 0.001
 
 output:

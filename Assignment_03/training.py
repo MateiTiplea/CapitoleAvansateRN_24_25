@@ -3,6 +3,7 @@ from utils.config_validator import ConfigValidator
 from utils.dataloader_factory import DataLoaderFactory
 from utils.dataset_factory import DatasetFactory
 from utils.device_utils import get_device
+from utils.model_factory import ModelFactory
 
 
 def main():
@@ -51,6 +52,11 @@ def main():
     print("DataLoaders created successfully.")
     print("Training DataLoader:", train_dataloader)
     print("Test DataLoader:", test_dataloader)
+
+    # Step 8: Initialize ModelFactory with config data
+    model_factory = ModelFactory(config)
+    model = model_factory.get_model()
+    print("Model loaded successfully:", model)
 
 
 if __name__ == "__main__":
