@@ -1,0 +1,12 @@
+dataset:
+  name: "MNIST"
+  data_dir: "./data/mnist"
+  download: True
+
+training:
+  # Placeholder for training properties
+  learning_rate: 0.001
+
+output:
+  # Placeholder for output properties
+  save_dir: "./output"
