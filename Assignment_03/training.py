@@ -1,50 +1,7 @@
-import torch
-import torch.nn as nn
-import torch.optim as optim
-
 from utils.arg_validator import ArgValidator
 from utils.config_validator import ConfigValidator
+from utils.dataset_factory import DatasetFactory
 from utils.device_utils import get_device
-
-
-# Dummy model for illustration (Replace with a real model later)
-class DummyModel(nn.Module):
-    def __init__(self):
-        super(DummyModel, self).__init__()
-        self.fc = nn.Linear(784, 10)  # Example linear layer (for MNIST)
-
-    def forward(self, x):
-        return self.fc(x)
-
-
-def train():
-    # Step 1: Get the device (CPU or GPU)
-    device = get_device()
-    print(f"Using device: {device}")
-
-    # Step 2: Initialize model and move it to the device
-    model = DummyModel().to(device)
-
-    # Step 3: Define a dummy dataset and DataLoader (Replace with actual dataset)
-    x = torch.randn(64, 784)  # Dummy data
-    y = torch.randint(0, 10, (64,))  # Dummy labels
-
-    # Step 4: Move data to the same device as the model
-    x, y = x.to(device), y.to(device)
-
-    # Define loss function and optimizer (for illustration)
-    criterion = nn.CrossEntropyLoss()
-    optimizer = optim.SGD(model.parameters(), lr=0.01)
-
-    # Dummy training loop
-    model.train()
-    for epoch in range(2):  # Example of 2 epochs
-        optimizer.zero_grad()
-        outputs = model(x)
-        loss = criterion(outputs, y)
-        loss.backward()
-        optimizer.step()
-        print(f"Epoch [{epoch+1}/2], Loss: {loss.item()}")
 
 
 def main():
@@ -56,6 +13,22 @@ def main():
     config = config_validator.validate_config()
 
     print("Configuration file validated successfully: ", config)
+
+    # Step 3: Initialize DatasetFactory with config data
+    dataset_config = config["dataset"]
+    dataset_name = dataset_config["name"]
+    data_dir = dataset_config["data_dir"]
+    download = dataset_config.get("download", False)
+
+    dataset_factory = DatasetFactory(dataset_name, data_dir, download)
+
+    # Step 4: Load training dataset
+    train_dataset = dataset_factory.get_dataset(train=True)
+    print("Dataset loaded successfully:", train_dataset)
+
+    # Step 5: Load test dataset
+    test_dataset = dataset_factory.get_dataset(train=False)
+    print("Dataset loaded successfully:", test_dataset)
 
 
 if __name__ == "__main__":

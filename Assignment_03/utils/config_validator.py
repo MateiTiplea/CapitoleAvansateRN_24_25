@@ -51,6 +51,9 @@ class ConfigValidator:
         if dataset_name not in self.DEFAULT_DATASETS:
             self._validate_custom_dataset(dataset_section)
 
+        # Validate transform scripts
+        self._validate_transform_scripts(dataset_section)
+
         return self.config_data
 
     def _validate_data_dir(self, dataset_section):
@@ -120,3 +123,18 @@ class ConfigValidator:
                 )
         except ImportError as e:
             raise ImportError(f"Could not import custom dataset '{dataset_name}': {e}")
+
+    def _validate_transform_scripts(self, dataset_section):
+        """Validates the presence and readability of transform script paths if specified."""
+        for script_key in ["initial_transform_script", "runtime_transform_script"]:
+            script_path = dataset_section.get(script_key)
+            if script_path:
+                if not os.path.isfile(script_path):
+                    raise ValueError(
+                        f"The specified transform script '{script_path}' does not exist."
+                    )
+                if not script_path.endswith(".py"):
+                    raise ValueError(
+                        f"The transform script '{script_path}' must be a Python (.py) file."
+                    )
+                print(f"Transform script '{script_path}' validated successfully.")
