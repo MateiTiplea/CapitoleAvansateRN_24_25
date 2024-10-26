@@ -7,6 +7,11 @@ import yaml
 class ConfigValidator:
     REQUIRED_SECTIONS = ["dataset", "training", "output", "dataloader"]
     DEFAULT_DATASETS = {"MNIST", "CIFAR10", "CIFAR100"}
+    SUPPORTED_MODELS = {
+        "CIFAR10": ["resnet18_cifar10", "PreActResNet18"],
+        "CIFAR100": ["resnet18_cifar10", "PreActResNet18"],
+        "MNIST": ["MLP", "LeNet"],
+    }
     DEFAULT_DATALOADER_PARAMS = {
         "num_workers": 0,
         "batch_size": 64,
@@ -59,6 +64,9 @@ class ConfigValidator:
 
         # Validate dataloader configuration
         self._validate_dataloader()
+
+        # Validate training configuration including model selection
+        self._validate_training(dataset_name)
 
         return self.config_data
 
@@ -170,3 +178,36 @@ class ConfigValidator:
                 else:
                     # Set default if parameter is missing
                     dataloader_config[param] = default_value
+
+    def _validate_training(self, dataset_name):
+        """Validates the training section, focusing on model specification."""
+        training_section = self.config_data.get("training")
+
+        model_name = training_section.get("model")
+        model_file = training_section.get("model_file")
+        model_class = training_section.get("model_class")
+
+        if model_name:
+            if model_name not in self.SUPPORTED_MODELS.get(dataset_name, []):
+                raise ValueError(
+                    f"Model '{model_name}' is not supported for dataset '{dataset_name}'."
+                )
+
+        elif model_file and model_class:
+            if not os.path.isfile(model_file):
+                raise ValueError(
+                    f"The specified model file '{model_file}' does not exist."
+                )
+            if not model_file.endswith(".py"):
+                raise ValueError(
+                    f"The model file '{model_file}' must be a Python (.py) file."
+                )
+            if not model_class:
+                raise ValueError(
+                    "The 'model_class' must be specified when using a custom model file."
+                )
+
+        else:
+            raise ValueError(
+                "You must specify either 'model' or both 'model_file' and 'model_class' in the training section."
+            )
