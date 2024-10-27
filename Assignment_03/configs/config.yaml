@@ -1,6 +1,6 @@
 dataset:
-  name: "CIFAR10"
-  data_dir: "./data/cifar10"
+  name: "MNIST"
+  data_dir: "./data/mnist"
   download: True
   # initial_transform_script: "./transforms/initial_transforms.py"
   # runtime_transform_script: "./transforms/runtime_transforms.py"
@@ -25,7 +25,7 @@ dataloader:
 training:
   # model_file: "./models/mlp.py"
   # model_class: "MLP"
-  model: "resnet18_cifar10"
+  model: "MLP"
   epochs: 100
   loss: "CrossEntropyLoss"
   device: "cuda"
@@ -47,8 +47,8 @@ training:
     delta: 0.01
     monitor_metric: "best_test_accuracy"
 
-logging:
-  tensorboard: true
+  logging:
+    tensorboard: true
 
 output:
-  save_dir: "./output/cifar10"
+  save_dir: "./output/mnist"

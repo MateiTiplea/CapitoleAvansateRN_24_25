@@ -87,6 +87,7 @@ def main():
     output_path = config["output"]["save_dir"]
     epochs = config["training"]["epochs"]
     early_stop = config["training"].get("early_stop")
+    logging_config = config["training"].get("logging")
 
     trainer = Trainer(
         model,
@@ -99,8 +100,10 @@ def main():
         epochs,
         scheduler=scheduler,
         early_stop=early_stop,
+        logging_config=logging_config,
     )
     trainer.train()
+    trainer.close()
 
 
 if __name__ == "__main__":
