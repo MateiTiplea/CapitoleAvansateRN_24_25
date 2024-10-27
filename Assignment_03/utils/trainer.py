@@ -1,7 +1,9 @@
 import os
 
 import torch
+import wandb
 from torch import Tensor
+from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm
 
 
@@ -18,6 +20,7 @@ class Trainer:
         epochs,
         scheduler=None,
         early_stop=None,
+        logging_config=None,
     ):
         """
         Initializes the Trainer with model, optimizer, criterion, data loaders, device, output path, and scheduler.
@@ -33,6 +36,7 @@ class Trainer:
             epochs (int): The number of epochs to train the model.
             scheduler (torch.optim.lr_scheduler._LRScheduler): The learning rate scheduler.
             early_stop (dict): The early stopping configuration.
+            logging_config (dict): The logging configuration.
         """
         self.model = model
         self.optimizer = optimizer
@@ -69,6 +73,25 @@ class Trainer:
         }
 
         os.makedirs(self.output_path, exist_ok=True)
+
+        self.logging_config = logging_config or {}
+
+        # TensorBoard setup
+        self.tensorboard_writer = None
+        if self.logging_config.get("tensorboard", False):
+            self.tensorboard_writer = SummaryWriter(
+                log_dir=os.path.join(output_path, "tensorboard_logs")
+            )
+
+        # wandb setup
+        self.wandb_enabled = self.logging_config.get("wandb", {}).get("enabled", False)
+        if self.wandb_enabled:
+            wandb.init(
+                project=self.logging_config["wandb"].get("project", "default_project"),
+                entity=self.logging_config["wandb"].get("entity"),
+                config=self.logging_config["wandb"].get("config", {}),
+            )
+            wandb.watch(self.model, log="all", log_freq=100)
 
     @staticmethod
     def accuracy(output: Tensor, labels: Tensor):
@@ -239,6 +262,35 @@ class Trainer:
                         self.best_metrics[key] = value
                         self._save_checkpoint(key)
 
+    def _log_metrics(self, epoch, acc, acc_val, fp_rate, fn_rate, loss, loss_val):
+        """
+        Logs metrics to TensorBoard and wandb if enabled.
+        """
+        metrics = {
+            "Train/Accuracy": acc,
+            "Test/Accuracy": acc_val,
+            "Test/False_Positive_Rate": fp_rate,
+            "Test/False_Negative_Rate": fn_rate,
+            "Train/Loss": loss,
+            "Test/Loss": loss_val,
+        }
+
+        # Log to TensorBoard
+        if self.tensorboard_writer:
+            for key, value in metrics.items():
+                self.tensorboard_writer.add_scalar(key, value, epoch)
+
+        # Log to wandb
+        if self.wandb_enabled:
+            wandb.log(metrics, step=epoch)
+
+    def close(self):
+        """Closes the TensorBoard writer and finalizes wandb."""
+        if self.tensorboard_writer:
+            self.tensorboard_writer.close()
+        if self.wandb_enabled:
+            wandb.finish()
+
     def train(self):
         self.epochs = tuple(range(self.epochs))
         current_epoch = 0
@@ -255,6 +307,10 @@ class Trainer:
 
                 self._check_early_stopping(
                     current_metric_value=self.best_metrics[self.monitor_metric]
+                )
+
+                self._log_metrics(
+                    current_epoch, acc, acc_val, fp_rate, fn_rate, loss, loss_val
                 )
 
                 tbar.set_description(

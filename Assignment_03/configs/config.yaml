@@ -47,5 +47,8 @@ training:
     delta: 0.01
     monitor_metric: "best_test_accuracy"
 
+logging:
+  tensorboard: true
+
 output:
   save_dir: "./output/cifar10"

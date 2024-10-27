@@ -85,6 +85,9 @@ class ConfigValidator:
         # Validate output section
         self._validate_output()
 
+        # Validate logging section
+        self._validate_logging()
+
         return self.config_data
 
     def _validate_data_dir(self, dataset_section):
@@ -401,3 +404,27 @@ class ConfigValidator:
 
         # Update the config with validated early_stop values
         training_section["early_stop"] = early_stop
+
+    def _validate_logging(self):
+        """Validates the logging section for TensorBoard and wandb configurations."""
+        logging = self.config_data.get("training", {}).get("logging", {})
+
+        # Validate TensorBoard and wandb settings
+        tensorboard_enabled = logging.get("tensorboard", False)
+        wandb_config = logging.get("wandb", {"enabled": False})
+
+        # Check for required wandb fields if enabled
+        if wandb_config.get("enabled"):
+            if "project" not in wandb_config:
+                raise ValueError(
+                    "wandb logging is enabled, but 'project' is not specified."
+                )
+            if "entity" not in wandb_config:
+                raise ValueError(
+                    "wandb logging is enabled, but 'entity' (username) is not specified."
+                )
+
+        # Assign defaults if any fields are missing
+        logging["tensorboard"] = tensorboard_enabled
+        logging["wandb"] = wandb_config
+        self.config_data["training"]["logging"] = logging
