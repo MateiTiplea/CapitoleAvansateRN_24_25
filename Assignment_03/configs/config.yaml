@@ -1,14 +1,14 @@
 dataset:
-  name: "MNIST"
-  data_dir: "./data/mnist"
-  download: False
+  name: "CIFAR10"
+  data_dir: "./data/cifar10"
+  download: True
   # initial_transform_script: "./transforms/initial_transforms.py"
   # runtime_transform_script: "./transforms/runtime_transforms.py"
 
 dataloader:
   train:
     num_workers: 0
-    batch_size: 64
+    batch_size: 100
     drop_last: True
     persistent_workers: False
     shuffle: True
@@ -16,21 +16,25 @@ dataloader:
 
   test:
     num_workers: 0
-    batch_size: 64
+    batch_size: 500
     drop_last: False
     persistent_workers: False
     shuffle: False
     pin_memory: False
 
 training:
-  model_file: "./models/mlp.py"
-  model_class: "MLP"
+  # model_file: "./models/mlp.py"
+  # model_class: "MLP"
+  model: "resnet18_cifar10"
+  epochs: 100
+  loss: "CrossEntropyLoss"
+  device: "cuda"
   optimizer:
     name: "SGD" # or "Adam", "AdamW", "RMSprop"
     params:
-      lr: 0.01
+      lr: 0.005
       momentum: 0.9
-      weight_decay: 0.0001
+      weight_decay: 0.005
       nesterov: True
   scheduler:
     name: "ReduceLROnPlateau"
@@ -39,5 +43,4 @@ training:
     patience: 5
 
 output:
-  # Placeholder for output properties
-  save_dir: "./output"
+  save_dir: "./output/cifar10"

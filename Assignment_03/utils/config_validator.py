@@ -1,6 +1,7 @@
 import importlib
 import os
 
+import torch
 import yaml
 
 
@@ -22,6 +23,7 @@ class ConfigValidator:
     }
     SUPPORTED_OPTIMIZERS = {"SGD", "Adam", "AdamW", "RMSprop"}
     SUPPORTED_SCHEDULERS = {"StepLR", "ReduceLROnPlateau"}
+    SUPPORTED_LOSSES = {"CrossEntropyLoss", "MSELoss"}
     DEFAULT_OPTIMIZER_PARAMS = {
         "SGD": {"lr": 0.01, "momentum": 0.0, "weight_decay": 0.0, "nesterov": False},
         "Adam": {"lr": 0.001, "weight_decay": 0.0},
@@ -79,6 +81,9 @@ class ConfigValidator:
 
         # Validate training configuration including model selection and optimizer
         self._validate_training(dataset_name)
+
+        # Validate output section
+        self._validate_output()
 
         return self.config_data
 
@@ -204,6 +209,22 @@ class ConfigValidator:
         # Validate scheduler selection
         self._validate_scheduler(training_section)
 
+        # Epochs validation
+        epochs = training_section.get("epochs")
+        if not isinstance(epochs, int) or epochs <= 0:
+            raise ValueError(
+                "The 'epochs' attribute in 'training' must be a positive integer."
+            )
+
+        # Loss function validation
+        loss_name = training_section.get("loss")
+        if loss_name not in self.SUPPORTED_LOSSES:
+            raise ValueError(
+                f"Unsupported loss function: '{loss_name}'. Supported options are: {', '.join(self.SUPPORTED_LOSSES)}."
+            )
+
+        self._validate_device(training_section)
+
     def _validate_model(self, dataset_name, training_section):
         model_name = training_section.get("model")
         model_file = training_section.get("model_file")
@@ -310,3 +331,45 @@ class ConfigValidator:
 
         scheduler_section["params"] = params  # Update config with validated params
         print(f"Scheduler '{scheduler_name}' validated successfully.")
+
+    def _validate_device(self, training_section):
+        """Validates the device setting in the training configuration."""
+        device = training_section.get("device", "cuda")
+        if device not in ["cuda", "cpu", "mps"]:
+            raise ValueError(
+                "The 'device' attribute in 'training' must be 'cuda', 'cpu', or 'mps'."
+            )
+        if device == "cuda" and not torch.cuda.is_available():
+            raise ValueError(
+                "CUDA is not available, but 'device' is set to 'cuda'. Please set 'device' to 'cpu' or ensure CUDA is available."
+            )
+        if device == "mps" and not torch.backends.mps.is_available():
+            raise ValueError(
+                "MPS is not available, but 'device' is set to 'mps'. Please set 'device' to 'cpu' or ensure MPS is available on your device."
+            )
+
+        training_section["device"] = device  # Ensure device is set in the configuration
+
+    def _validate_output(self):
+        """Validates the output section, including the save_dir for checkpoints."""
+        output_section = self.config_data.get("output")
+        if "save_dir" not in output_section:
+            raise ValueError(
+                "The 'output' section must contain a 'save_dir' attribute."
+            )
+
+        save_dir = output_section["save_dir"]
+        if not os.path.exists(save_dir):
+            try:
+                os.makedirs(save_dir)
+                print(
+                    f"Created checkpoint directory at '{save_dir}' as it did not exist."
+                )
+            except Exception as e:
+                raise ValueError(
+                    f"Could not create the specified save directory '{save_dir}': {e}"
+                )
+        elif not os.path.isdir(save_dir):
+            raise ValueError(
+                f"The specified save directory '{save_dir}' exists but is not a directory."
+            )

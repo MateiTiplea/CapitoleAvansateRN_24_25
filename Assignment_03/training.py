@@ -3,9 +3,11 @@ from utils.config_validator import ConfigValidator
 from utils.dataloader_factory import DataLoaderFactory
 from utils.dataset_factory import DatasetFactory
 from utils.device_utils import get_device
+from utils.loss_factory import LossFactory
 from utils.model_factory import ModelFactory
 from utils.optimizer_factory import OptimizerFactory
 from utils.scheduler_factory import SchedulerFactory
+from utils.trainer import Trainer
 
 
 def main():
@@ -72,6 +74,31 @@ def main():
         print("Scheduler initialized successfully:", scheduler)
     else:
         print("No scheduler is being used for this training.")
+
+    # Step 11: Initialize LossFactory and get loss function
+    loss_factory = LossFactory(config)
+    criterion = loss_factory.get_loss_function()
+    print("Loss function initialized successfully:", criterion)
+
+    # Step 12: Get the device to be used for training
+    device = get_device(config["training"]["device"])
+
+    # Step 13: Initialize Trainer with all the components
+    output_path = config["output"]["save_dir"]
+    epochs = config["training"]["epochs"]
+
+    trainer = Trainer(
+        model,
+        optimizer,
+        criterion,
+        train_dataloader,
+        test_dataloader,
+        device,
+        output_path,
+        epochs,
+        scheduler=scheduler,
+    )
+    trainer.train()
 
 
 if __name__ == "__main__":
