@@ -17,6 +17,7 @@ class Trainer:
         output_path,
         epochs,
         scheduler=None,
+        early_stop=None,
     ):
         """
         Initializes the Trainer with model, optimizer, criterion, data loaders, device, output path, and scheduler.
@@ -31,6 +32,7 @@ class Trainer:
             output_path (str): The path to save the trained model.
             epochs (int): The number of epochs to train the model.
             scheduler (torch.optim.lr_scheduler._LRScheduler): The learning rate scheduler.
+            early_stop (dict): The early stopping configuration.
         """
         self.model = model
         self.optimizer = optimizer
@@ -41,6 +43,18 @@ class Trainer:
         self.output_path = output_path
         self.epochs = epochs
         self.scheduler = scheduler
+
+        if early_stop:
+            self.early_stopping_patience = early_stop.get("patience", 5)
+            self.early_stopping_delta = early_stop.get("delta", 0.0)
+            self.monitor_metric = early_stop.get("monitor_metric", "best_test_loss")
+            self.best_metric_value = (
+                float("inf") if "loss" in self.monitor_metric else -float("inf")
+            )
+            self.early_stopping_counter = 0
+            self.early_stop = False
+        else:
+            self.early_stopping_patience = None  # Indicates no early stopping
 
         self.model = self.model.to(self.device)
         self.model = torch.jit.script(self.model)
@@ -75,6 +89,35 @@ class Trainer:
             torch.logical_and(output == 0, labels == 1).sum().item()
             / (labels == 1).sum().item()
         )
+
+    def _check_early_stopping(self, current_metric_value):
+        """
+        Checks if early stopping criteria are met and updates the patience counter.
+        """
+        if (
+            self.early_stopping_patience is None
+        ):  # Skip if early stopping is not enabled
+            return
+
+        # Determine if there is an improvement based on the delta and monitor metric
+        if "loss" in self.monitor_metric:
+            improved = (
+                current_metric_value
+                < self.best_metric_value - self.early_stopping_delta
+            )
+        else:
+            improved = (
+                current_metric_value
+                > self.best_metric_value + self.early_stopping_delta
+            )
+
+        if improved:
+            self.best_metric_value = current_metric_value
+            self.early_stopping_counter = 0
+        else:
+            self.early_stopping_counter += 1
+            if self.early_stopping_counter >= self.early_stopping_patience:
+                self.early_stop = True
 
     def _train_epoch(self):
         self.model.train()
@@ -209,6 +252,15 @@ class Trainer:
                 self._update_best_metrics(
                     acc, acc_val, fp_rate, fn_rate, loss, loss_val
                 )
+
+                self._check_early_stopping(
+                    current_metric_value=self.best_metrics[self.monitor_metric]
+                )
+
                 tbar.set_description(
                     f"Train Acc: {acc:.4f}, Test Acc: {acc_val:.4f}, FP Rate: {fp_rate:.4f}, FN Rate: {fn_rate:.4f}, Loss: {loss:.4f}, Test Loss: {loss_val:.4f}"
                 )
+
+                if self.early_stop:
+                    print("Early stopping activated.")
+                    break

@@ -42,5 +42,10 @@ training:
     factor: 0.1
     patience: 5
 
+  early_stop: # Optional early stopping parameters
+    patience: 5
+    delta: 0.01
+    monitor_metric: "best_test_accuracy"
+
 output:
   save_dir: "./output/cifar10"

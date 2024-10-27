@@ -225,6 +225,9 @@ class ConfigValidator:
 
         self._validate_device(training_section)
 
+        # Validate early stopping configuration
+        self._validate_early_stop(training_section)
+
     def _validate_model(self, dataset_name, training_section):
         model_name = training_section.get("model")
         model_file = training_section.get("model_file")
@@ -373,3 +376,28 @@ class ConfigValidator:
             raise ValueError(
                 f"The specified save directory '{save_dir}' exists but is not a directory."
             )
+
+    def _validate_early_stop(self, training_section):
+        """Validates the early_stop section in training, with default values if missing."""
+        early_stop = training_section.get("early_stop", {})
+
+        # Set default values if early_stop is partially defined or missing
+        early_stop.setdefault("patience", 5)
+        early_stop.setdefault("delta", 0.0)
+        early_stop.setdefault("monitor_metric", "best_test_loss")
+
+        # Ensure the specified monitor_metric is one of the valid metrics
+        valid_metrics = [
+            "best_test_loss",
+            "best_test_accuracy",
+            "best_loss",
+            "best_train_accuracy",
+        ]
+        monitor_metric = early_stop["monitor_metric"]
+        if monitor_metric not in valid_metrics:
+            raise ValueError(
+                f"Invalid monitor_metric '{monitor_metric}'. Must be one of {valid_metrics}."
+            )
+
+        # Update the config with validated early_stop values
+        training_section["early_stop"] = early_stop
