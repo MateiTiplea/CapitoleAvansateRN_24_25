@@ -5,6 +5,7 @@ from utils.dataset_factory import DatasetFactory
 from utils.device_utils import get_device
 from utils.model_factory import ModelFactory
 from utils.optimizer_factory import OptimizerFactory
+from utils.scheduler_factory import SchedulerFactory
 
 
 def main():
@@ -63,6 +64,14 @@ def main():
     optimizer_factory = OptimizerFactory(config)
     optimizer = optimizer_factory.get_optimizer(model.parameters())
     print("Optimizer loaded successfully:", optimizer)
+
+    # Step 10: Initialize SchedulerFactory and get scheduler (if specified)
+    scheduler_factory = SchedulerFactory(config)
+    scheduler = scheduler_factory.get_scheduler(optimizer)
+    if scheduler:
+        print("Scheduler initialized successfully:", scheduler)
+    else:
+        print("No scheduler is being used for this training.")
 
 
 if __name__ == "__main__":

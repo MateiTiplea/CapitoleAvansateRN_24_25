@@ -21,11 +21,16 @@ class ConfigValidator:
         "pin_memory": False,
     }
     SUPPORTED_OPTIMIZERS = {"SGD", "Adam", "AdamW", "RMSprop"}
+    SUPPORTED_SCHEDULERS = {"StepLR", "ReduceLROnPlateau"}
     DEFAULT_OPTIMIZER_PARAMS = {
         "SGD": {"lr": 0.01, "momentum": 0.0, "weight_decay": 0.0, "nesterov": False},
         "Adam": {"lr": 0.001, "weight_decay": 0.0},
         "AdamW": {"lr": 0.001, "weight_decay": 0.0},
         "RMSprop": {"lr": 0.01, "momentum": 0.0, "weight_decay": 0.0},
+    }
+    DEFAULT_SCHEDULER_PARAMS = {
+        "StepLR": {"step_size": 10, "gamma": 0.1},
+        "ReduceLROnPlateau": {"mode": "min", "factor": 0.1, "patience": 10},
     }
 
     def __init__(self, config_path):
@@ -196,6 +201,9 @@ class ConfigValidator:
         # Validate optimizer selection
         self._validate_optimizer(training_section)
 
+        # Validate scheduler selection
+        self._validate_scheduler(training_section)
+
     def _validate_model(self, dataset_name, training_section):
         model_name = training_section.get("model")
         model_file = training_section.get("model_file")
@@ -260,3 +268,45 @@ class ConfigValidator:
 
         optimizer_section["params"] = params  # Update config with validated params
         print(f"Optimizer '{optimizer_name}' validated successfully.")
+
+    def _validate_scheduler(self, training_section):
+        """Validates the scheduler section within training, if provided."""
+        scheduler_section = training_section.get("scheduler")
+        if not scheduler_section:
+            print(
+                "No scheduler specified. Training will proceed without a learning rate scheduler."
+            )
+            return
+
+        scheduler_name = scheduler_section.get("name")
+        if scheduler_name not in self.SUPPORTED_SCHEDULERS:
+            raise ValueError(f"Unsupported scheduler: '{scheduler_name}'.")
+
+        # Validate scheduler parameters, setting defaults where necessary
+        params = scheduler_section.get("params", {})
+        default_params = self.DEFAULT_SCHEDULER_PARAMS[scheduler_name]
+
+        for param, default_value in default_params.items():
+            if param in params:
+                if param in ["step_size", "patience"] and not isinstance(
+                    params[param], int
+                ):
+                    raise ValueError(
+                        f"'{param}' for scheduler '{scheduler_name}' must be an integer."
+                    )
+                if param in ["gamma", "factor"] and not isinstance(
+                    params[param], (int, float)
+                ):
+                    raise ValueError(
+                        f"'{param}' for scheduler '{scheduler_name}' must be a number."
+                    )
+                if param == "mode" and params[param] not in ["min", "max"]:
+                    raise ValueError(
+                        f"'mode' for 'ReduceLROnPlateau' must be 'min' or 'max'."
+                    )
+            else:
+                # Set default if parameter is missing
+                params[param] = default_value
+
+        scheduler_section["params"] = params  # Update config with validated params
+        print(f"Scheduler '{scheduler_name}' validated successfully.")
