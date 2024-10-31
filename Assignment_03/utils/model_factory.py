@@ -17,6 +17,7 @@ class ModelFactory:
             config (dict): Configuration dictionary with model specifications.
         """
         self.config = config["training"]
+        self.dataset_info = config["dataset"]
 
     def get_model(self):
         """
@@ -34,10 +35,14 @@ class ModelFactory:
             return MLP(num_classes=10)
         elif model_name == "LeNet":
             return LeNet(num_classes=10)
-        elif model_name == "resnet18_cifar10":
+        elif model_name == "resnet18" and self.dataset_info["name"] == "CIFAR10":
             return ResNet18_CIFAR10(num_classes=10)
-        elif model_name == "PreActResNet18":
+        elif model_name == "resnet18" and self.dataset_info["name"] == "CIFAR100":
+            return ResNet18_CIFAR10(num_classes=100)
+        elif model_name == "PreActResNet18" and self.dataset_info["name"] == "CIFAR10":
             return PreActResNet18(num_classes=10)
+        elif model_name == "PreActResNet18" and self.dataset_info["name"] == "CIFAR100":
+            return PreActResNet18(num_classes=100)
 
         # Load custom model if specified
         elif model_file and model_class:

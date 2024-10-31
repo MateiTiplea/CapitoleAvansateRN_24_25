@@ -9,8 +9,8 @@ class ConfigValidator:
     REQUIRED_SECTIONS = ["dataset", "training", "output", "dataloader"]
     DEFAULT_DATASETS = {"MNIST", "CIFAR10", "CIFAR100"}
     SUPPORTED_MODELS = {
-        "CIFAR10": ["resnet18_cifar10", "PreActResNet18"],
-        "CIFAR100": ["resnet18_cifar10", "PreActResNet18"],
+        "CIFAR10": ["resnet18", "PreActResNet18"],
+        "CIFAR100": ["resnet18", "PreActResNet18"],
         "MNIST": ["MLP", "LeNet"],
     }
     DEFAULT_DATALOADER_PARAMS = {
