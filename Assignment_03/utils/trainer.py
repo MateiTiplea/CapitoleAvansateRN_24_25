@@ -3,6 +3,7 @@ import os
 
 import torch
 from torch import Tensor
+from torch.amp import GradScaler, autocast
 from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm
 
@@ -49,6 +50,7 @@ class Trainer:
         self.output_path = output_path
         self.epochs = epochs
         self.scheduler = scheduler
+        self.scaler = GradScaler()
 
         if early_stop:
             self.early_stopping_patience = early_stop.get("patience", 5)
@@ -63,7 +65,7 @@ class Trainer:
             self.early_stopping_patience = None  # Indicates no early stopping
 
         self.model = self.model.to(self.device)
-        self.model = torch.jit.script(self.model)
+        # self.model = torch.jit.script(self.model)
 
         self.best_metrics = {
             "best_train_accuracy": 0,
@@ -156,13 +158,22 @@ class Trainer:
             inputs = inputs.to(self.device, non_blocking=True)
             labels = labels.to(self.device, non_blocking=True)
 
-            output = self.model(inputs)
-            loss = self.criterion(output, labels)
+            with autocast(device_type=self.device.type):
+                output = self.model(inputs)
+                loss = self.criterion(output, labels)
 
-            loss.backward()
-
-            self.optimizer.step()
+            self.scaler.scale(loss).backward()
+            self.scaler.step(self.optimizer)
+            self.scaler.update()
             self.optimizer.zero_grad(set_to_none=True)
+
+            # output = self.model(inputs)
+            # loss = self.criterion(output, labels)
+
+            # loss.backward()
+
+            # self.optimizer.step()
+            # self.optimizer.zero_grad(set_to_none=True)
 
             running_loss += loss.item()
             output = output.softmax(dim=1).detach().cpu().squeeze()
@@ -170,6 +181,8 @@ class Trainer:
 
             all_outputs.append(output)
             all_labels.append(labels)
+
+            torch.cuda.empty_cache()
 
         all_outputs = torch.cat(all_outputs).argmax(dim=1)
         all_labels = torch.cat(all_labels)
@@ -187,19 +200,22 @@ class Trainer:
 
         running_loss = 0.0
 
-        for inputs, labels in self.test_loader:
-            inputs = inputs.to(self.device, non_blocking=True)
-            labels = labels.to(self.device, non_blocking=True)
+        with torch.no_grad():
+            for inputs, labels in self.test_loader:
+                inputs = inputs.to(self.device, non_blocking=True)
+                labels = labels.to(self.device, non_blocking=True)
 
-            output = self.model(inputs)
-            loss = self.criterion(output, labels)
+                output = self.model(inputs)
+                loss = self.criterion(output, labels)
 
-            running_loss += loss.item()
-            output = output.softmax(dim=1).cpu().squeeze()
-            labels = labels.cpu().squeeze()
+                running_loss += loss.item()
+                output = output.softmax(dim=1).cpu().squeeze()
+                labels = labels.cpu().squeeze()
 
-            all_outputs.append(output)
-            all_labels.append(labels)
+                all_outputs.append(output)
+                all_labels.append(labels)
+
+                torch.cuda.empty_cache()
 
         all_outputs = torch.cat(all_outputs).argmax(dim=1)
         all_labels = torch.cat(all_labels)

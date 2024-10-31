@@ -1,0 +1,53 @@
+# base_config.yaml
+
+dataset:
+  name: "CIFAR100"
+  data_dir: "./data/cifar100"
+  download: true
+  initial_transform_script: "./transforms/initial_transforms.py"
+
+dataloader:
+  train:
+    num_workers: 0
+    batch_size: 32
+    drop_last: True
+    persistent_workers: False
+    shuffle: True
+    pin_memory: True
+
+  test:
+    num_workers: 0
+    batch_size: 32
+    drop_last: False
+    persistent_workers: False
+    shuffle: False
+    pin_memory: False
+
+training:
+  model: null # Will be filled from the generated file
+  epochs: 50
+  loss: "CrossEntropyLoss"
+  device: "cuda"
+  optimizer:
+    name: null # Will be filled from the generated file
+    params:
+      lr: null # Will be filled from the generated file
+      momentum: null # Will be filled from the generated file
+      weight_decay: null # Will be filled from the generated file
+
+  scheduler:
+    name: "ReduceLROnPlateau"
+    mode: "min"
+    factor: 0.1
+    patience: 5
+
+  early_stop:
+    patience: 5
+    delta: 0.0001
+    monitor_metric: "best_test_accuracy"
+
+  logging:
+    tensorboard: true
+
+output:
+  save_dir: "./output"
