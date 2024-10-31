@@ -1,9 +1,9 @@
 dataset:
-  name: "MNIST"
-  data_dir: "./data/mnist"
+  name: "CIFAR100"
+  data_dir: "./data/cifar100"
   download: True
-  # initial_transform_script: "./transforms/initial_transforms.py"
-  # runtime_transform_script: "./transforms/runtime_transforms.py"
+  initial_transform_script: "./transforms/initial_transforms.py"
+  runtime_transform_script: "./transforms/runtime_transforms_basic.py"
 
 dataloader:
   train:
@@ -25,8 +25,8 @@ dataloader:
 training:
   # model_file: "./models/mlp.py"
   # model_class: "MLP"
-  model: "MLP"
-  epochs: 100
+  model: "resnet18"
+  epochs: 50
   loss: "CrossEntropyLoss"
   device: "cuda"
   optimizer:
@@ -44,11 +44,11 @@ training:
 
   early_stop: # Optional early stopping parameters
     patience: 5
-    delta: 0.01
+    delta: 0.0001
     monitor_metric: "best_test_accuracy"
 
   logging:
     tensorboard: true
 
 output:
-  save_dir: "./output/mnist"
+  save_dir: "./output/cifar100"

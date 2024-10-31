@@ -1,0 +1,25 @@
+method: grid
+parameters:
+  model:
+    values: ["resnet18", "PreActResNet18"]
+  runtime_transform_script:
+    values:
+      [
+        "transforms/runtime_transform_basic.py",
+        "transforms/runtime_transform_advanced.py",
+      ]
+  optimizer:
+    values: ["SGD", "Adam"]
+  learning_rate:
+    values: [0.001, 0.005, 0.01] # List of specific values
+  momentum:
+    values: [0.9, 0.95]
+  weight_decay:
+    values: [0.0001, 0.001]
+project: "CapitoleAvansateRN_24_25" # Set project name here
+
+command:
+  - ${env:PYTHON}
+  - training.py
+  - --config
+  - configs/config_sweep.yaml

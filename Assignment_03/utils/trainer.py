@@ -1,10 +1,12 @@
+import json
 import os
 
 import torch
-import wandb
 from torch import Tensor
 from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm
+
+import wandb
 
 
 class Trainer:
@@ -320,3 +322,6 @@ class Trainer:
                 if self.early_stop:
                     print("Early stopping activated.")
                     break
+
+        with open(os.path.join(self.output_path, "best_metrics.json"), "w") as f:
+            json.dump(self.best_metrics, f, indent=4)
