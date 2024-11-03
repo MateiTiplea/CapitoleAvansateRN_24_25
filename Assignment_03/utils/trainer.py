@@ -65,13 +65,11 @@ class Trainer:
             self.early_stopping_patience = None  # Indicates no early stopping
 
         self.model = self.model.to(self.device)
-        # self.model = torch.jit.script(self.model)
+        self.model = torch.jit.script(self.model)
 
         self.best_metrics = {
             "best_train_accuracy": 0,
             "best_test_accuracy": 0,
-            # "best_fp_rate": float("inf"),
-            # "best_fn_rate": float("inf"),
             "best_loss": float("inf"),
             "best_test_loss": float("inf"),
         }
@@ -134,46 +132,42 @@ class Trainer:
 
     def _train_epoch(self):
         self.model.train()
-
-        all_outputs = []
-        all_labels = []
-
         running_loss = 0.0
+
+        correct = 0
+        total = 0
 
         for inputs, labels in self.train_loader:
             inputs = inputs.to(self.device, non_blocking=True)
             labels = labels.to(self.device, non_blocking=True)
 
+            # Debugging prints to check tensor shapes
+            # print(f"inputs shape: {inputs.shape}")
+            # print(f"labels shape: {labels.shape}")
+
             with autocast(device_type=self.device.type):
                 output = self.model(inputs)
                 loss = self.criterion(output, labels)
+            # print(f"output shape: {output.shape}")
 
             self.scaler.scale(loss).backward()
             self.scaler.step(self.optimizer)
             self.scaler.update()
             self.optimizer.zero_grad(set_to_none=True)
 
-            # output = self.model(inputs)
-            # loss = self.criterion(output, labels)
-
-            # loss.backward()
-
-            # self.optimizer.step()
-            # self.optimizer.zero_grad(set_to_none=True)
-
             running_loss += loss.item()
-            output = output.softmax(dim=1).detach().cpu().squeeze()
-            labels = labels.cpu().squeeze()
 
-            all_outputs.append(output)
-            all_labels.append(labels)
+            predicted = output.argmax(dim=1)
+            # print(f"predicted shape: {predicted.shape}")  # Debugging print
+
+            labels = labels.argmax(dim=1)
+
+            correct += predicted.eq(labels).sum().item()
+            total += labels.size(0)
 
             torch.cuda.empty_cache()
 
-        all_outputs = torch.cat(all_outputs).argmax(dim=1)
-        all_labels = torch.cat(all_labels)
-
-        acc = round(self.accuracy(all_outputs, all_labels), 4)
+        acc = round(correct / total, 4)
         loss = round(running_loss / len(self.train_loader), 4)
 
         return acc, loss

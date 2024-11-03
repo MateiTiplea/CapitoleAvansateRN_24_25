@@ -1,5 +1,20 @@
 import torch
 from torch.utils.data import DataLoader
+from torch.utils.data.dataloader import default_collate
+from torchvision.transforms.v2 import CutMix, MixUp, RandomChoice
+
+# Define the augmentation options
+cutmix = CutMix(num_classes=100, alpha=1.0)
+mixup = MixUp(num_classes=100, alpha=1.0)
+cutmix_or_mixup = RandomChoice([cutmix, mixup])
+
+
+# Define the custom collate function
+def collate_fn(batch):
+    # Use default_collate to format the batch
+    inputs, labels = default_collate(batch)
+    # Apply CutMix or MixUp to the batch
+    return cutmix_or_mixup(inputs, labels)
 
 
 class DataLoaderFactory:
@@ -34,12 +49,24 @@ class DataLoaderFactory:
         config = self.dataloader_config[mode]
 
         # Create DataLoader with the specified settings
-        return DataLoader(
-            dataset,
-            batch_size=config["batch_size"],
-            shuffle=config["shuffle"],
-            num_workers=config["num_workers"],
-            drop_last=config["drop_last"],
-            pin_memory=config["pin_memory"],
-            persistent_workers=config["persistent_workers"],
-        )
+        if mode == "train":
+            return DataLoader(
+                dataset,
+                batch_size=config["batch_size"],
+                shuffle=config["shuffle"],
+                num_workers=config["num_workers"],
+                drop_last=config["drop_last"],
+                pin_memory=config["pin_memory"],
+                persistent_workers=config["persistent_workers"],
+                collate_fn=collate_fn,
+            )
+        else:
+            return DataLoader(
+                dataset,
+                batch_size=config["batch_size"],
+                shuffle=config["shuffle"],
+                num_workers=config["num_workers"],
+                drop_last=config["drop_last"],
+                pin_memory=config["pin_memory"],
+                persistent_workers=config["persistent_workers"],
+            )
