@@ -101,7 +101,7 @@ def main():
     # Step 13: Initialize Trainer with all the components
     output_path = config["output"]["save_dir"]
     epochs = config["training"]["epochs"]
-    early_stop = config["training"].get("early_stop")
+    early_stop = config["training"].get("early_stop", None)
     logging_config = config["training"].get("logging")
 
     trainer = Trainer(

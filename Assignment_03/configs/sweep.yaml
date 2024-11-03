@@ -11,7 +11,7 @@ parameters:
   optimizer:
     values: ["SGD", "Adam"]
   learning_rate:
-    values: [0.001, 0.005, 0.01] # List of specific values
+    value: 0.01 # List of specific values
   momentum:
     values: [0.9, 0.95]
   weight_decay:

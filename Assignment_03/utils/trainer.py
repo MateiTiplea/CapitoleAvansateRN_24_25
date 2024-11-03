@@ -70,8 +70,8 @@ class Trainer:
         self.best_metrics = {
             "best_train_accuracy": 0,
             "best_test_accuracy": 0,
-            "best_fp_rate": float("inf"),
-            "best_fn_rate": float("inf"),
+            # "best_fp_rate": float("inf"),
+            # "best_fn_rate": float("inf"),
             "best_loss": float("inf"),
             "best_test_loss": float("inf"),
         }
@@ -102,20 +102,6 @@ class Trainer:
         fp_plus_fn = torch.logical_not(output == labels).sum().item()
         all_elements = len(output)
         return (all_elements - fp_plus_fn) / all_elements
-
-    @staticmethod
-    def false_positive_rate(output: Tensor, labels: Tensor):
-        return (
-            torch.logical_and(output == 1, labels == 0).sum().item()
-            / (labels == 0).sum().item()
-        )
-
-    @staticmethod
-    def false_negative_rate(output: Tensor, labels: Tensor):
-        return (
-            torch.logical_and(output == 0, labels == 1).sum().item()
-            / (labels == 1).sum().item()
-        )
 
     def _check_early_stopping(self, current_metric_value):
         """
@@ -222,16 +208,14 @@ class Trainer:
 
         acc = round(self.accuracy(all_outputs, all_labels), 4)
         loss = round(running_loss / len(self.test_loader), 4)
-        fp_rate = round(self.false_positive_rate(all_outputs, all_labels), 4)
-        fn_rate = round(self.false_negative_rate(all_outputs, all_labels), 4)
 
-        return acc, loss, fp_rate, fn_rate
+        return acc, loss
 
     def _do_epoch(self):
         acc, loss = self._train_epoch()
-        acc_val, loss_val, fp_rate, fn_rate = self.evaluate()
+        acc_val, loss_val = self.evaluate()
 
-        return acc, acc_val, fp_rate, fn_rate, loss, loss_val
+        return acc, acc_val, loss, loss_val
 
     def _save_checkpoint(self, metric_name):
         """
@@ -243,12 +227,10 @@ class Trainer:
         checkpoint_path = os.path.join(self.output_path, f"{metric_name}.pth")
         torch.save(self.model.state_dict(), checkpoint_path)
 
-    def _update_best_metrics(self, acc, acc_val, fp_rate, fn_rate, loss, loss_val):
+    def _update_best_metrics(self, acc, acc_val, loss, loss_val):
         metrics = {
             "best_train_accuracy": acc,
             "best_test_accuracy": acc_val,
-            "best_fp_rate": fp_rate,
-            "best_fn_rate": fn_rate,
             "best_loss": loss,
             "best_test_loss": loss_val,
         }
@@ -263,14 +245,6 @@ class Trainer:
                     if value > self.best_metrics[key]:
                         self.best_metrics[key] = value
                         self._save_checkpoint(key)
-                elif key == "best_fp_rate":
-                    if value < self.best_metrics[key]:
-                        self.best_metrics[key] = value
-                        self._save_checkpoint(key)
-                elif key == "best_fn_rate":
-                    if value < self.best_metrics[key]:
-                        self.best_metrics[key] = value
-                        self._save_checkpoint(key)
                 elif key == "best_loss":
                     if value < self.best_metrics[key]:
                         self.best_metrics[key] = value
@@ -280,15 +254,13 @@ class Trainer:
                         self.best_metrics[key] = value
                         self._save_checkpoint(key)
 
-    def _log_metrics(self, epoch, acc, acc_val, fp_rate, fn_rate, loss, loss_val):
+    def _log_metrics(self, epoch, acc, acc_val, loss, loss_val):
         """
         Logs metrics to TensorBoard and wandb if enabled.
         """
         metrics = {
             "Train/Accuracy": acc,
             "Test/Accuracy": acc_val,
-            "Test/False_Positive_Rate": fp_rate,
-            "Test/False_Negative_Rate": fn_rate,
             "Train/Loss": loss,
             "Test/Loss": loss_val,
         }
@@ -315,29 +287,27 @@ class Trainer:
         with tqdm(self.epochs) as tbar:
             for _ in tbar:
                 current_epoch += 1
-                acc, acc_val, fp_rate, fn_rate, loss, loss_val = self._do_epoch()
+                acc, acc_val, loss, loss_val = self._do_epoch()
                 if self.scheduler:
                     self.scheduler.step(acc_val)
 
-                self._update_best_metrics(
-                    acc, acc_val, fp_rate, fn_rate, loss, loss_val
-                )
+                self._update_best_metrics(acc, acc_val, loss, loss_val)
 
-                self._check_early_stopping(
-                    current_metric_value=self.best_metrics[self.monitor_metric]
-                )
+                if self.early_stopping_patience is not None:
+                    self._check_early_stopping(
+                        current_metric_value=self.best_metrics[self.monitor_metric]
+                    )
 
-                self._log_metrics(
-                    current_epoch, acc, acc_val, fp_rate, fn_rate, loss, loss_val
-                )
+                self._log_metrics(current_epoch, acc, acc_val, loss, loss_val)
 
                 tbar.set_description(
-                    f"Train Acc: {acc:.4f}, Test Acc: {acc_val:.4f}, FP Rate: {fp_rate:.4f}, FN Rate: {fn_rate:.4f}, Loss: {loss:.4f}, Test Loss: {loss_val:.4f}"
+                    f"Train Acc: {acc:.4f}, Test Acc: {acc_val:.4f}, Loss: {loss:.4f}, Test Loss: {loss_val:.4f}"
                 )
 
-                if self.early_stop:
-                    print("Early stopping activated.")
-                    break
+                if self.early_stopping_patience is not None:
+                    if self.early_stop:
+                        print("Early stopping activated.")
+                        break
 
         with open(os.path.join(self.output_path, "best_metrics.json"), "w") as f:
             json.dump(self.best_metrics, f, indent=4)

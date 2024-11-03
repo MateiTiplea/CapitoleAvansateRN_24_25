@@ -382,7 +382,13 @@ class ConfigValidator:
 
     def _validate_early_stop(self, training_section):
         """Validates the early_stop section in training, with default values if missing."""
-        early_stop = training_section.get("early_stop", {})
+        early_stop = training_section.get("early_stop", None)
+
+        if not early_stop:
+            print(
+                "No early stopping criteria specified. Training will continue for all epochs."
+            )
+            return
 
         # Set default values if early_stop is partially defined or missing
         early_stop.setdefault("patience", 5)

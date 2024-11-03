@@ -1,0 +1,14 @@
+wandb_version: 1
+
+learning_rate:
+  value: 0.01
+model:
+  value: resnet18
+momentum:
+  value: 0.9
+optimizer:
+  value: SGD
+runtime_transform_script:
+  value: transforms/runtime_transform_basic.py
+weight_decay:
+  value: 0.0001
