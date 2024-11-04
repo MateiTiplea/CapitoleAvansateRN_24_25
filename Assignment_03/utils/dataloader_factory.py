@@ -58,7 +58,7 @@ class DataLoaderFactory:
                 drop_last=config["drop_last"],
                 pin_memory=config["pin_memory"],
                 persistent_workers=config["persistent_workers"],
-                collate_fn=collate_fn,
+                # collate_fn=collate_fn,
             )
         else:
             return DataLoader(

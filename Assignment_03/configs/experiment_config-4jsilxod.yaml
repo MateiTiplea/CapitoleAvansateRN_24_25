@@ -1,0 +1,39 @@
+dataloader:
+  test:
+    batch_size: 500
+    drop_last: false
+    num_workers: 0
+    persistent_workers: false
+    pin_memory: false
+    shuffle: false
+  train:
+    batch_size: 100
+    drop_last: true
+    num_workers: 0
+    persistent_workers: false
+    pin_memory: true
+    shuffle: true
+dataset:
+  data_dir: ./data/cifar100
+  download: true
+  initial_transform_script: ./transforms/initial_transforms.py
+  name: CIFAR100
+  runtime_transform_script: transforms/runtime_transform_advanced.py
+output:
+  save_dir: C:\Master\An1\RN\CapitoleAvansateRN_24_25\Assignment_03\output\experiment_config-4jsilxod
+training:
+  device: cuda
+  epochs: 150
+  logging:
+    tensorboard: true
+  loss: CrossEntropyLoss
+  model: resnet18
+  optimizer:
+    name: Adam
+    params:
+      lr: 0.001
+  scheduler:
+    factor: 0.1
+    mode: min
+    name: ReduceLROnPlateau
+    patience: 5

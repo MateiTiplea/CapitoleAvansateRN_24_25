@@ -1,0 +1,6 @@
+{
+    "best_train_accuracy": 0.7277,
+    "best_test_accuracy": 0.5816,
+    "best_loss": 0.9079,
+    "best_test_loss": 1.6455
+}

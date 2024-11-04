@@ -141,14 +141,9 @@ class Trainer:
             inputs = inputs.to(self.device, non_blocking=True)
             labels = labels.to(self.device, non_blocking=True)
 
-            # Debugging prints to check tensor shapes
-            # print(f"inputs shape: {inputs.shape}")
-            # print(f"labels shape: {labels.shape}")
-
             with autocast(device_type=self.device.type):
                 output = self.model(inputs)
                 loss = self.criterion(output, labels)
-            # print(f"output shape: {output.shape}")
 
             self.scaler.scale(loss).backward()
             self.scaler.step(self.optimizer)
@@ -158,9 +153,8 @@ class Trainer:
             running_loss += loss.item()
 
             predicted = output.argmax(dim=1)
-            # print(f"predicted shape: {predicted.shape}")  # Debugging print
 
-            labels = labels.argmax(dim=1)
+            # labels = labels.argmax(dim=1)
 
             correct += predicted.eq(labels).sum().item()
             total += labels.size(0)

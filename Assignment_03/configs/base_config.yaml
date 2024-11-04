@@ -25,7 +25,7 @@ dataloader:
 
 training:
   model: null # Will be filled from the generated file
-  epochs: 50
+  epochs: 150
   loss: "CrossEntropyLoss"
   device: "cuda"
   optimizer:
