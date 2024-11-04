@@ -1,3 +1,108 @@
+## General Overview of the Custom Pipeline
+
+The custom pipeline works by specifying a couple properties that are essential in a configuration file that looks something like this:
+
+```yaml
+dataset:
+  name: "CIFAR100"
+  data_dir: "./data/cifar100"
+  download: True
+  initial_transform_script: "./transforms/initial_transforms.py"
+  runtime_transform_script: "./transforms/runtime_transforms_basic.py"
+
+dataloader:
+  train:
+    num_workers: 0
+    batch_size: 100
+    drop_last: True
+    persistent_workers: False
+    shuffle: True
+    pin_memory: True
+
+  test:
+    num_workers: 0
+    batch_size: 500
+    drop_last: False
+    persistent_workers: False
+    shuffle: False
+    pin_memory: False
+
+training:
+  # model_file: "./models/mlp.py"
+  # model_class: "MLP"
+  model: "resnet18"
+  epochs: 50
+  loss: "CrossEntropyLoss"
+  device: "cuda"
+  optimizer:
+    name: "SGD" # or "Adam", "AdamW", "RMSprop"
+    params:
+      lr: 0.005
+      momentum: 0.9
+      weight_decay: 0.005
+      nesterov: True
+  scheduler:
+    name: "ReduceLROnPlateau"
+    mode: "min"
+    factor: 0.1
+    patience: 5
+
+  early_stop: # Optional early stopping parameters
+    patience: 5
+    delta: 0.0001
+    monitor_metric: "best_test_accuracy"
+
+  logging:
+    tensorboard: true
+
+output:
+  save_dir: "./output/cifar100"
+```
+
+The configuration file contains 4 main sections:
+
+1. Dataset: contains properties such as the dataset to be used (can be given by name or by path), the directory where the data is stored, whether to download the data, the initial transform script, and the runtime transform script.
+
+   - the dataset can be given through its name if it is something predefined and accepted by the config validator such as: MNIST, CIFAR10, CIFAR100; or the name can be specified in the following form: `<module>.<class>` where the module is the path to the module and the class is the name of the class that is the custom dataset.
+   - the initial transform script and runtime transform script are python script given by their path that each contain a function that returns the transform to be applied to the data; that function is then dynamically imported and used in the pipeline.
+
+   ```python
+   def get_initial_transform():
+    return transforms.Compose(
+        [
+            transforms.ToImage(),
+            transforms.ToDtype(torch.float32, scale=True),
+            transforms.Normalize(
+                # (0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)
+                mean=(0.491, 0.482, 0.446),
+                std=(0.247, 0.243, 0.261),
+            ),
+        ]
+    )
+   ```
+
+   ```python
+   def get_runtime_transform():
+    return transforms.Compose(
+        [transforms.RandomHorizontalFlip(), transforms.RandomCrop(32, padding=4)]
+    )
+   ```
+
+2. Dataloader: contains properties such as the number of workers, batch size, whether to drop the last batch, whether to use persistent workers, whether to shuffle the data, and whether to pin the memory, for both the training and testing dataloaders.
+
+3. Training: contains the model to be used, the number of epochs, the loss function to be used, the device to be run on, the optimizer to be used, the scheduler to be used, and the early stopping parameters, if any, and the logging parameters.
+
+   - the model can be given through its name if it is something predefined and accepted by the config validator such as: "resnet18", "PreActResNet18", "MLP", etc.; or it can be specified in two steps, the model file and the model class, where the model file is the path to the module and the model class is the name of the class that is the custom model.
+   - the loss function has to be one of the predefined loss functions in PyTorch, such as: "CrossEntropyLoss", "MSELoss"
+   - the optimizer can be one of the predefined optimizers in PyTorch, such as: "SGD", "Adam", "AdamW", "RMSprop", and each optimizer has its own parameters that can be specified.
+   - the scheduler can be one of the predefined schedulers in PyTorch, such as: "StepLR", "ReduceLROnPlateau", and each scheduler has its own parameters that can be specified.
+   - the early stopping parameters are optional and can be specified if early stopping is desired, and they contain the patience, delta, and monitor metric.
+   - the logging parameters contain the tensorboard flag that specifies whether to log the training process using tensorboard, or even wandb.
+
+4. Output: contains the directory where the output will be saved.
+
+## Experimentation and Results
+
 The parameter sweep was done using a combination of wandb and a custom script. The wandb was used to create multiple sweep files with combinations of the parameters. The custom script was used in order to get the sweep files, create appropiate configurations files for the custom pipeline, and then run those configurations. Each result is then saved in the "./output" directory with the name of the configuration file.
 
 ---
